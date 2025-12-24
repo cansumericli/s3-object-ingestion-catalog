@@ -66,8 +66,15 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CatalogTable
-        - S3ReadPolicy:
-            BucketName: !Ref UploadBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub "arn:aws:s3:::${ProjectName}-${AWS::AccountId}-${AWS::Region}-upload/*"
+            - Effect: Allow
+              Action:
+                - s3:ListBucket
+              Resource: !Sub "arn:aws:s3:::${ProjectName}-${AWS::AccountId}-${AWS::Region}-upload"
       Events:
         S3UploadEvent:
           Type: S3
@@ -91,7 +98,7 @@ Resources:
             TableName: !Ref CatalogTable
       Environment:
         Variables:
-          UPLOAD_BUCKET_NAME: !Ref UploadBucket
+          UPLOAD_BUCKET_NAME: !Sub "${ProjectName}-${AWS::AccountId}-${AWS::Region}-upload"
       Events:
         BySourceSystem:
           Type: HttpApi
