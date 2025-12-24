@@ -27,6 +27,9 @@ Resources:
         IgnorePublicAcls: true
         BlockPublicPolicy: true
         RestrictPublicBuckets: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true  
 
   CatalogTable:
     Type: AWS::DynamoDB::Table
@@ -75,12 +78,31 @@ Resources:
               Action:
                 - s3:ListBucket
               Resource: !Sub "arn:aws:s3:::${ProjectName}-${AWS::AccountId}-${AWS::Region}-upload"
-      Events:
-        S3UploadEvent:
-          Type: S3
-          Properties:
-            Bucket: !Ref UploadBucket
-            Events: s3:ObjectCreated:*
+
+  S3ObjectCreatedRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Route S3 object created events to ingest Lambda
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - Object Created
+        detail:
+          bucket:
+            name:
+              - !Ref UploadBucket
+      Targets:
+        - Arn: !GetAtt IngestFunction.Arn
+          Id: IngestFunctionTarget
+
+  AllowEventBridgeInvokeIngest:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref IngestFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt S3ObjectCreatedRule.Arn
 
   HttpApi:
     Type: AWS::Serverless::HttpApi
