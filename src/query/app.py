@@ -7,7 +7,20 @@ from boto3.dynamodb.conditions import Key
 dynamodb = boto3.resource("dynamodb")
 TABLE_NAME = os.environ["TABLE_NAME"]
 
+def _normalize_item(item: dict) -> dict:
+    # DynamoDB’den bazen string gibi gelebiliyor; güvenli şekilde int’e çeviriyoruz
+    if isinstance(item, dict) and "sizeBytes" in item:
+        try:
+            item["sizeBytes"] = int(item["sizeBytes"])
+        except Exception:
+            pass
+    return item
+
 def _dumps(obj):
+    if isinstance(obj, list):
+        obj = [_normalize_item(i) for i in obj]
+    elif isinstance(obj, dict):
+        obj = _normalize_item(obj)
     return json.dumps(obj, default=str)
 
 def lambda_handler(event, context):
